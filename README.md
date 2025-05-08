@@ -1,68 +1,67 @@
 # YouTube Analytics
+# Setting up the YouTube API Key
 
-A modern YouTube Analytics application that demonstrates real-time YouTube data integration with fallback mechanisms.
+## Overview
 
-## Features
+This application uses the YouTube Data API to fetch real-time data. To use the app with real data, you'll need to:
 
-- View trending YouTube videos
-- Search for videos
-- See detailed video metrics and statistics
-- View related videos and engagement metrics
-- Responsive design with Tailwind CSS
+1. Create a Google Cloud Platform project
+2. Enable the YouTube Data API
+3. Create an API key
+4. Add the API key to your environment variables
 
-## Data Sources
+## Step-by-Step Guide
 
-This application uses a three-tier approach for fetching YouTube data:
+### 1. Create a Google Cloud Platform Project
 
-1. **Cursor MCP YouTube Tools** (when running in Cursor)
-   - Uses Cursor's Multi-Call Protocol (MCP) YouTube tools to access real-time YouTube data
-   - Only available when running in the Cursor environment
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or use an existing one
+3. Make note of your project ID
 
-2. **YouTube Data API v3** (for online deployment)
-   - Uses the official YouTube Data API for production deployment
-   - Requires an API key from Google Cloud Platform
-   - See [SETUP_API.md](SETUP_API.md) for setup instructions
+### 2. Enable the YouTube Data API
 
-3. **Mock Data** (fallback)
-   - Falls back to mock data if neither MCP nor the YouTube API are available
-   - Ensures the application always displays something meaningful
+1. In your GCP project, go to "APIs & Services" > "Library"
+2. Search for "YouTube Data API v3"
+3. Click on the API and then click "Enable"
 
-## Development Setup
+### 3. Create an API Key
 
-```bash
-# Install dependencies
-npm install
+1. In your GCP project, go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" and select "API Key"
+3. Your new API key will be displayed. Copy it for the next step.
+4. (Optional but recommended) Restrict the API key to only the YouTube Data API to enhance security
 
-# Run development server
-npm run dev
-```
+### 4. Add the API Key to Your Application
 
-## Environment Variables
+#### Development Environment
 
-Create a `.env.local` file with:
+Create a `.env.local` file in the project root and add your API key:
 
 ```
 YOUTUBE_API_KEY=YOUR_API_KEY_HERE
 ```
 
-## Testing MCP YouTube Tools
+Replace `YOUR_API_KEY_HERE` with the actual API key you obtained from Google Cloud.
 
-The repository includes two testing tools:
+#### Production Environment
 
-1. `test-mcp.js`: A Node.js script to test MCP availability
-2. `test-mcp.html`: A browser-based test page to check for MCP functions and make test calls
+When deploying to production, add the `YOUTUBE_API_KEY` environment variable in your hosting platform's settings.
 
-## Deployment
+## API Quotas and Limitations
 
-When deploying online, you must provide a YouTube API key as an environment variable. The application will automatically use this key when MCP tools are not available.
+The YouTube Data API has daily quotas:
 
-## Technologies
+- By default, you get 10,000 units per day
+- Different operations cost different amounts of quota units
+- Monitor your usage in the Google Cloud Console under "APIs & Services" > "Dashboard"
 
-- Next.js 15.3.2
-- React 19
-- Tailwind CSS
-- TypeScript
+## Troubleshooting
 
-## License
+- If you see "API Key not valid" errors, check that you've correctly copied and set the key
+- If you see "Quota exceeded" errors, you've hit your daily limit
+- Make sure the API is enabled for your project
 
-MIT
+## Further Reading
+
+- [YouTube Data API Documentation](https://developers.google.com/youtube/v3/docs)
+- [Google Cloud API Key Best Practices](https://cloud.google.com/docs/authentication/api-keys) 
