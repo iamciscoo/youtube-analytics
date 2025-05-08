@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YouTube Analytics
 
-## Getting Started
+A modern YouTube Analytics application that demonstrates real-time YouTube data integration with fallback mechanisms.
 
-First, run the development server:
+## Features
+
+- View trending YouTube videos
+- Search for videos
+- See detailed video metrics and statistics
+- View related videos and engagement metrics
+- Responsive design with Tailwind CSS
+
+## Data Sources
+
+This application uses a three-tier approach for fetching YouTube data:
+
+1. **Cursor MCP YouTube Tools** (when running in Cursor)
+   - Uses Cursor's Multi-Call Protocol (MCP) YouTube tools to access real-time YouTube data
+   - Only available when running in the Cursor environment
+
+2. **YouTube Data API v3** (for online deployment)
+   - Uses the official YouTube Data API for production deployment
+   - Requires an API key from Google Cloud Platform
+   - See [SETUP_API.md](SETUP_API.md) for setup instructions
+
+3. **Mock Data** (fallback)
+   - Falls back to mock data if neither MCP nor the YouTube API are available
+   - Ensures the application always displays something meaningful
+
+## Development Setup
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env.local` file with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+YOUTUBE_API_KEY=YOUR_API_KEY_HERE
+```
 
-## Learn More
+## Testing MCP YouTube Tools
 
-To learn more about Next.js, take a look at the following resources:
+The repository includes two testing tools:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `test-mcp.js`: A Node.js script to test MCP availability
+2. `test-mcp.html`: A browser-based test page to check for MCP functions and make test calls
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+When deploying online, you must provide a YouTube API key as an environment variable. The application will automatically use this key when MCP tools are not available.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Technologies
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 15.3.2
+- React 19
+- Tailwind CSS
+- TypeScript
+
+## License
+
+MIT

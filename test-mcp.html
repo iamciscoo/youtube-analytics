@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP YouTube Tools Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        .result {
+            margin-top: 15px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #0d904f;
+        }
+        .error {
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP YouTube Tools Tester</h1>
+    <p>
+        This page allows you to test if YouTube MCP tools are available in your 
+        current environment (these functions only work in Cursor).
+    </p>
+
+    <div class="test-section">
+        <h2>Test 1: Check MCP Availability</h2>
+        <button id="checkAvailability">Check MCP Availability</button>
+        <div id="availabilityResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Get Trending Videos</h2>
+        <button id="getTrending">Get Trending Videos</button>
+        <div id="trendingResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Search Videos</h2>
+        <input type="text" id="searchQuery" placeholder="Search query" value="JavaScript tutorial">
+        <button id="searchVideos">Search Videos</button>
+        <div id="searchResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Get Video Details</h2>
+        <input type="text" id="videoId" placeholder="Video ID" value="dQw4w9WgXcQ">
+        <button id="getVideoDetails">Get Video Details</button>
+        <div id="detailsResult" class="result"></div>
+    </div>
+
+    <script>
+        // Test availability of MCP functions
+        document.getElementById('checkAvailability').addEventListener('click', function() {
+            const resultDiv = document.getElementById('availabilityResult');
+            resultDiv.innerHTML = '';
+            
+            const functions = [
+                'mcp_youtube_getTrendingVideos',
+                'mcp_youtube_searchVideos',
+                'mcp_youtube_getVideoDetails',
+                'mcp_youtube_getRelatedVideos',
+                'mcp_youtube_getTranscripts'
+            ];
+            
+            let availableCount = 0;
+            functions.forEach(fnName => {
+                if (typeof window[fnName] === 'function') {
+                    resultDiv.innerHTML += `<div class="success">✅ ${fnName} is available</div>`;
+                    availableCount++;
+                } else {
+                    resultDiv.innerHTML += `<div class="error">❌ ${fnName} is NOT available</div>`;
+                }
+            });
+            
+            if (availableCount === 0) {
+                resultDiv.innerHTML += `<div class="error">\nMCP functions are not available in this environment. 
+                    This test page should be opened in Cursor to access MCP functions.</div>`;
+            }
+        });
+
+        // Test trending videos
+        document.getElementById('getTrending').addEventListener('click', async function() {
+            const resultDiv = document.getElementById('trendingResult');
+            resultDiv.innerHTML = 'Fetching trending videos...';
+            
+            try {
+                if (typeof window.mcp_youtube_getTrendingVideos === 'function') {
+                    const videos = await window.mcp_youtube_getTrendingVideos({
+                        regionCode: 'US',
+                        maxResults: 5
+                    });
+                    
+                    resultDiv.innerHTML = `<div class="success">✅ Successfully retrieved ${videos.length} trending videos:</div>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(videos, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ mcp_youtube_getTrendingVideos function is not available</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // Test search videos
+        document.getElementById('searchVideos').addEventListener('click', async function() {
+            const resultDiv = document.getElementById('searchResult');
+            const query = document.getElementById('searchQuery').value.trim();
+            
+            if (!query) {
+                resultDiv.innerHTML = '<div class="error">Please enter a search query</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = `Searching for "${query}"...`;
+            
+            try {
+                if (typeof window.mcp_youtube_searchVideos === 'function') {
+                    const videos = await window.mcp_youtube_searchVideos({
+                        query,
+                        maxResults: 5
+                    });
+                    
+                    resultDiv.innerHTML = `<div class="success">✅ Successfully retrieved ${videos.length} search results:</div>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(videos, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ mcp_youtube_searchVideos function is not available</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        // Test video details
+        document.getElementById('getVideoDetails').addEventListener('click', async function() {
+            const resultDiv = document.getElementById('detailsResult');
+            const videoId = document.getElementById('videoId').value.trim();
+            
+            if (!videoId) {
+                resultDiv.innerHTML = '<div class="error">Please enter a video ID</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = `Fetching details for video ${videoId}...`;
+            
+            try {
+                if (typeof window.mcp_youtube_getVideoDetails === 'function') {
+                    const details = await window.mcp_youtube_getVideoDetails({
+                        videoIds: [videoId]
+                    });
+                    
+                    resultDiv.innerHTML = `<div class="success">✅ Successfully retrieved video details:</div>`;
+                    resultDiv.innerHTML += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ mcp_youtube_getVideoDetails function is not available</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html> 
