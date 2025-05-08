@@ -89,15 +89,42 @@ export async function POST(req: NextRequest) {
     }
     
     // 2. Use YouTube API if MCP fails
-    console.log('Using YouTube API for video details');
-    const detailsData = await getVideoDetails({ videoIds });
-    
-    if (detailsData && detailsData.length > 0) {
-      // These items are already in the YouTube API format, just return them
-      return NextResponse.json({ items: detailsData });
+    try {
+      console.log('Using YouTube API for video details');
+      const detailsData = await getVideoDetails({ videoIds });
+      
+      // Return the items whether empty or not
+      if (detailsData && detailsData.length > 0) {
+        // These items are already in the YouTube API format, just return them
+        return NextResponse.json({ items: detailsData });
+      } else {
+        // Return empty items with a message
+        return NextResponse.json({ 
+          items: [],
+          message: 'No video details available. YouTube API may be experiencing issues or quota limits.' 
+        });
+      }
+    } catch (youtubeError) {
+      console.error('YouTube API error:', youtubeError);
+      
+      // Check for quota exceeded or other API errors
+      if (youtubeError instanceof Error) {
+        const errorMessage = youtubeError.message;
+        
+        if (errorMessage.includes('403')) {
+          return NextResponse.json({ 
+            error: 'YouTube API quota exceeded or access denied. Please try again later.',
+            quotaExceeded: true,
+            items: [] // Always include items array, even when empty
+          }, { status: 403 });
+        }
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch video details from YouTube API. The service may be temporarily unavailable.',
+        items: [] // Always include items array, even when empty
+      }, { status: 500 });
     }
-    
-    return NextResponse.json({ error: 'Failed to fetch video details from YouTube API' }, { status: 500 });
   } catch (error) {
     console.error('Error in video details API:', error);
     

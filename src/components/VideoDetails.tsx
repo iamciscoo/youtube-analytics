@@ -42,11 +42,14 @@ export default function VideoDetails({ videoId }: VideoDetailsProps) {
   const [stats, setStats] = useState<VideoStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
   useEffect(() => {
     const fetchDetails = async () => {
       try {
         setLoading(true);
+        setError('');
         
         // Try to use MCP tools directly first
         const customWindow = window as unknown as CustomWindow;
@@ -54,64 +57,103 @@ export default function VideoDetails({ videoId }: VideoDetailsProps) {
         
         if (hasMcpTools) {
           console.log('Using MCP tools directly for video details');
-          const videoDetails = await customWindow.mcp_youtube_getVideoDetails!({ 
-            videoIds: [videoId] 
-          });
-          
-          if (videoDetails && videoDetails.length > 0) {
-            const detail = videoDetails[0];
-            setStats({
-              viewCount: parseInt(detail.viewCount) || 0,
-              likeCount: parseInt(detail.likeCount) || 0,
-              commentCount: parseInt(detail.commentCount) || 0,
-              channelId: detail.channelId
+          try {
+            const videoDetails = await customWindow.mcp_youtube_getVideoDetails!({ 
+              videoIds: [videoId] 
             });
-            setLoading(false);
-            return;
+            
+            if (videoDetails && videoDetails.length > 0) {
+              const detail = videoDetails[0];
+              setStats({
+                viewCount: parseInt(detail.viewCount) || 0,
+                likeCount: parseInt(detail.likeCount) || 0,
+                commentCount: parseInt(detail.commentCount) || 0,
+                channelId: detail.channelId
+              });
+              setLoading(false);
+              return;
+            }
+          } catch (mcpError) {
+            console.log('MCP fetch failed, falling back to API:', mcpError);
           }
         }
         
         // Fall back to API
-        const response = await fetch('/api/youtube/video-details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ videoIds: [videoId] }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch video details');
-        }
-
-        const data = await response.json();
-        if (data.items && data.items[0]) {
-          setStats({
-            viewCount: parseInt(data.items[0].statistics.viewCount) || 0,
-            likeCount: parseInt(data.items[0].statistics.likeCount) || 0,
-            commentCount: parseInt(data.items[0].statistics.commentCount) || 0,
-            channelId: data.items[0].snippet?.channelId
+        try {
+          const response = await fetch('/api/youtube/video-details', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: [videoId] }),
           });
+
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to fetch video details');
+          }
+
+          if (data.items && data.items[0]) {
+            setStats({
+              viewCount: parseInt(data.items[0].statistics?.viewCount || '0'),
+              likeCount: parseInt(data.items[0].statistics?.likeCount || '0'),
+              commentCount: parseInt(data.items[0].statistics?.commentCount || '0'),
+              channelId: data.items[0].snippet?.channelId
+            });
+          } else {
+            // If no data returned, create fallback stats
+            setStats({
+              viewCount: 0,
+              likeCount: 0,
+              commentCount: 0,
+              channelId: undefined
+            });
+          }
+        } catch (apiError) {
+          console.error('API fetch error:', apiError);
+          
+          // If we have API errors, use fallback data
+          if (retryCount < MAX_RETRIES) {
+            setRetryCount(prev => prev + 1);
+            console.log(`Retrying fetch (${retryCount + 1}/${MAX_RETRIES})...`);
+            // Wait a moment before retrying
+            setTimeout(fetchDetails, 1000);
+            return;
+          }
+          
+          // After max retries, just show fallback data
+          setStats({
+            viewCount: 0,
+            likeCount: 0,
+            commentCount: 0,
+            channelId: undefined
+          });
+          setError('Stats temporarily unavailable');
         }
       } catch (err) {
-        setError('Failed to load video statistics');
-        console.error(err);
+        console.error('Fatal error in video details:', err);
+        setError('Failed to load statistics');
+        
+        // Provide fallback stats after error
+        setStats({
+          viewCount: 0,
+          likeCount: 0,
+          commentCount: 0,
+          channelId: undefined
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchDetails();
-  }, [videoId]);
+  }, [videoId, retryCount]);
 
   if (loading) {
     return <div className="animate-pulse bg-gray-200 h-20 rounded-md"></div>;
   }
 
-  if (error) {
-    return <div className="text-red-500 text-sm">{error}</div>;
-  }
-
   if (!stats) {
-    return null;
+    return <div className="text-gray-500 text-sm">Statistics unavailable</div>;
   }
 
   return (
@@ -130,6 +172,12 @@ export default function VideoDetails({ videoId }: VideoDetailsProps) {
           <p className="text-sm text-gray-600">Comments</p>
         </div>
       </div>
+      
+      {error && (
+        <div className="text-amber-600 text-xs text-center py-1 bg-amber-50 rounded-md">
+          {error}
+        </div>
+      )}
       
       <div className="flex justify-between text-sm">
         <Link 

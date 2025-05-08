@@ -2,11 +2,11 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import youtubeCaptionScraper from 'youtube-caption-scraper';
 
 // YouTube API utilities
-// Replace YOUTUBE_API_KEY with your actual API key when deploying
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
+// Using the provided API key directly
+const YOUTUBE_API_KEY = 'AIzaSyAQl1oX_pjBZ2oC9EY8qSsJXhogxowtHUs';
 
-// Check if API key is available
-const isApiKeyAvailable = YOUTUBE_API_KEY && YOUTUBE_API_KEY !== 'YOUR_API_KEY' && YOUTUBE_API_KEY.length > 0;
+// Check if API key is available - this will always be true now that we've hardcoded it
+const isApiKeyAvailable = true;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 /**
@@ -42,24 +42,50 @@ export async function fetchTrendingVideos(params: {
   
   try {
     const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.status}`);
+    let responseText = '';
+    
+    try {
+      // Try to get response text for detailed error information
+      responseText = await response.text();
+    } catch {
+      // Ignore if we can't get response text
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      // Log detailed error info but don't throw
+      console.error(`YouTube API error (${response.status}): ${responseText}`);
+      
+      // Return empty array instead of throwing
+      return [];
+    }
+    
+    // Parse the response text to JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse YouTube API response');
+      return [];
+    }
+    
+    if (!data.items || !Array.isArray(data.items)) {
+      console.warn('YouTube API returned no items');
+      return [];
+    }
     
     // Transform to format that matches our MCP response
     return data.items.map((item: any) => ({
       id: item.id,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      viewCount: item.statistics.viewCount,
-      likeCount: item.statistics.likeCount
+      title: item.snippet?.title || 'Untitled Video',
+      channelTitle: item.snippet?.channelTitle || 'Unknown Channel',
+      publishedAt: item.snippet?.publishedAt || '',
+      viewCount: item.statistics?.viewCount || '0',
+      likeCount: item.statistics?.likeCount || '0'
     }));
   } catch (error) {
     console.error('Error fetching trending videos:', error);
-    throw new Error('Failed to fetch trending videos from YouTube API');
+    // Return empty array instead of throwing
+    return [];
   }
 }
 
@@ -81,15 +107,42 @@ export async function searchVideos(params: {
   
   try {
     const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.status}`);
+    let responseText = '';
+    
+    try {
+      // Try to get response text for detailed error information
+      responseText = await response.text();
+    } catch {
+      // Ignore if we can't get response text
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      // Log detailed error info but don't throw
+      console.error(`YouTube API error (${response.status}): ${responseText}`);
+      
+      // Return empty array instead of throwing
+      return [];
+    }
+    
+    // Parse the response text to JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse YouTube API response');
+      return [];
+    }
+    
+    if (!data.items || !Array.isArray(data.items)) {
+      console.warn('YouTube API returned no search results');
+      return [];
+    }
+    
     return data.items;
   } catch (error) {
     console.error('Error searching videos:', error);
-    throw new Error('Failed to search videos from YouTube API');
+    // Return empty array instead of throwing
+    return [];
   }
 }
 
@@ -108,15 +161,42 @@ export async function getVideoDetails(params: {
   
   try {
     const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`YouTube API error: ${response.status}`);
+    let responseText = '';
+    
+    try {
+      // Try to get response text for detailed error information
+      responseText = await response.text();
+    } catch {
+      // Ignore if we can't get response text
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      // Log detailed error info but don't throw
+      console.error(`YouTube API error (${response.status}): ${responseText}`);
+      
+      // Return empty array instead of throwing
+      return [];
+    }
+    
+    // Parse the response text to JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse YouTube API response');
+      return [];
+    }
+    
+    if (!data.items || !Array.isArray(data.items)) {
+      console.warn('YouTube API returned no items for video details');
+      return [];
+    }
+    
     return data.items;
   } catch (error) {
     console.error('Error fetching video details:', error);
-    throw new Error('Failed to fetch video details from YouTube API');
+    // Return empty array instead of throwing
+    return [];
   }
 }
 
@@ -140,13 +220,31 @@ export async function getRelatedVideos(params: {
     videoDetailsUrl.searchParams.append('key', YOUTUBE_API_KEY);
     
     const videoResponse = await fetch(videoDetailsUrl.toString());
-    if (!videoResponse.ok) {
-      throw new Error(`YouTube API error: ${videoResponse.status}`);
+    let videoResponseText = '';
+    
+    try {
+      videoResponseText = await videoResponse.text();
+    } catch {
+      // Ignore if we can't get response text
     }
     
-    const videoData = await videoResponse.json();
+    if (!videoResponse.ok) {
+      console.error(`YouTube API error (${videoResponse.status}) when getting video details: ${videoResponseText}`);
+      return [];
+    }
+    
+    // Parse the response
+    let videoData;
+    try {
+      videoData = JSON.parse(videoResponseText);
+    } catch {
+      console.error('Failed to parse YouTube API response for video details');
+      return [];
+    }
+    
     if (!videoData.items || videoData.items.length === 0) {
-      throw new Error(`Video not found: ${videoId}`);
+      console.warn(`Video not found: ${videoId}`);
+      return [];
     }
     
     // Extract key terms from the title for search
@@ -166,11 +264,32 @@ export async function getRelatedVideos(params: {
     searchUrl.searchParams.append('key', YOUTUBE_API_KEY);
     
     const searchResponse = await fetch(searchUrl.toString());
-    if (!searchResponse.ok) {
-      throw new Error(`YouTube API error: ${searchResponse.status}`);
+    let searchResponseText = '';
+    
+    try {
+      searchResponseText = await searchResponse.text();
+    } catch {
+      // Ignore if we can't get response text
     }
     
-    const searchData = await searchResponse.json();
+    if (!searchResponse.ok) {
+      console.error(`YouTube API error (${searchResponse.status}) when searching related videos: ${searchResponseText}`);
+      return [];
+    }
+    
+    // Parse the search response
+    let searchData;
+    try {
+      searchData = JSON.parse(searchResponseText);
+    } catch {
+      console.error('Failed to parse YouTube API search response');
+      return [];
+    }
+    
+    if (!searchData.items || !Array.isArray(searchData.items)) {
+      console.warn('YouTube API returned no related videos');
+      return [];
+    }
     
     // Filter out the original video from results
     const filteredItems = searchData.items.filter((item: any) => 
@@ -180,13 +299,14 @@ export async function getRelatedVideos(params: {
     // Transform to format similar to our MCP response
     return filteredItems.map((item: any) => ({
       id: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      thumbnailUrl: item.snippet.thumbnails.medium.url
+      title: item.snippet?.title || 'Untitled Video', 
+      channelTitle: item.snippet?.channelTitle || 'Unknown Channel',
+      thumbnailUrl: item.snippet?.thumbnails?.medium?.url || ''
     }));
   } catch (error) {
     console.error('Error fetching related videos:', error);
-    throw new Error('Failed to fetch related videos from YouTube API');
+    // Return empty array instead of throwing
+    return [];
   }
 }
 

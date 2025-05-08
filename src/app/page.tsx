@@ -4,22 +4,6 @@ import { useState, useEffect } from 'react'
 import SearchBar from '@/components/SearchBar'
 import VideoCard from '@/components/VideoCard'
 
-interface TrendingVideo {
-  id: string;
-  title: string;
-  channelTitle: string;
-  publishedAt: string;
-  viewCount: string;
-  likeCount: string;
-}
-
-// Define a type for the MCP function
-type McpYouTubeGetTrendingVideos = (params: { 
-  regionCode?: string; 
-  categoryId?: string; 
-  maxResults?: number 
-}) => Promise<TrendingVideo[]>;
-
 interface FormattedVideo {
   id: string | { videoId: string };
   snippet: {
@@ -35,11 +19,6 @@ interface FormattedVideo {
     viewCount: string;
     likeCount: string;
   };
-}
-
-// Augment Window interface
-interface CustomWindow extends Window {
-  mcp_youtube_getTrendingVideos?: McpYouTubeGetTrendingVideos;
 }
 
 export default function Home() {
@@ -60,79 +39,7 @@ export default function Home() {
     setIsSearchMode(false);
     
     try {
-      // First make a direct MCP call using Cursor's special functions
-      // This will work in Cursor but fail in a normal browser
-      try {
-        // @ts-expect-error - Directly accessing MCP function
-        const trendingVids = await mcp_youtube_getTrendingVideos({ 
-          regionCode: 'US',
-          maxResults: 12
-        });
-        
-        if (trendingVids && trendingVids.length > 0) {
-          console.log('Successfully fetched trending videos using direct MCP access');
-          // Transform to the expected format
-          const formattedVideos = trendingVids.map((video: TrendingVideo) => ({
-            id: { videoId: video.id },
-            snippet: {
-              title: video.title,
-              channelTitle: video.channelTitle,
-              publishedAt: video.publishedAt,
-              thumbnails: {
-                medium: { url: `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg` }
-              }
-            },
-            statistics: {
-              viewCount: video.viewCount,
-              likeCount: video.likeCount
-            }
-          }));
-          
-          setVideos(formattedVideos);
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Swallow error and continue - this is expected outside of Cursor
-        console.log('Direct MCP access not available, continuing with window check');
-      }
-      
-      // Try the customWindow approach as a fallback
-      const customWindow = window as unknown as CustomWindow;
-      const hasMcpTools = typeof customWindow.mcp_youtube_getTrendingVideos === 'function';
-      
-      if (hasMcpTools) {
-        console.log('Using MCP tools directly from client for trending videos');
-        const trendingVids = await customWindow.mcp_youtube_getTrendingVideos!({ 
-          regionCode: 'US',
-          maxResults: 12
-        });
-        
-        if (trendingVids && trendingVids.length > 0) {
-          // Transform to the expected format
-          const formattedVideos = trendingVids.map((video: TrendingVideo) => ({
-            id: { videoId: video.id },
-            snippet: {
-              title: video.title,
-              channelTitle: video.channelTitle,
-              publishedAt: video.publishedAt,
-              thumbnails: {
-                medium: { url: `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg` }
-              }
-            },
-            statistics: {
-              viewCount: video.viewCount,
-              likeCount: video.likeCount
-            }
-          }));
-          
-          setVideos(formattedVideos);
-          setLoading(false);
-          return;
-        }
-      }
-      
-      // Fall back to API if MCP tools not available or failed
+      // Use the API route to fetch trending videos
       const response = await fetch('/api/youtube/trending', {
         method: 'POST',
         headers: {
@@ -146,6 +53,13 @@ export default function Home() {
       }
       
       const data = await response.json();
+      
+      if (data.message && data.items.length === 0) {
+        // If we have a message but no items, it's likely a quota issue
+        console.warn('API returned a message:', data.message);
+        setError(data.message);
+      }
+      
       setVideos(data.items || []);
     } catch (err) {
       console.error('Error fetching trending videos:', err);
@@ -156,20 +70,12 @@ export default function Home() {
   };
 
   // Handle search submission
-  const handleSearch = async (query: string, directResults?: FormattedVideo[]) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query);
     setLoading(true);
     setError('');
     setIsSearchMode(true);
     
-    // If we already have direct results from MCP, use them
-    if (directResults && directResults.length > 0) {
-      setVideos(directResults);
-      setLoading(false);
-      return;
-    }
-    
-    // Otherwise fall back to API
     try {
       const response = await fetch('/api/youtube/search', {
         method: 'POST',
@@ -184,6 +90,13 @@ export default function Home() {
       }
       
       const data = await response.json();
+      
+      if (data.message && data.items.length === 0) {
+        // If we have a message but no items, it's likely a quota issue
+        console.warn('API returned a message:', data.message);
+        setError(data.message);
+      }
+      
       setVideos(data.items || []);
     } catch (err) {
       console.error('Error searching videos:', err);

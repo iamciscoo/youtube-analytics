@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mcp_youtube_getRelatedVideos, RelatedVideo } from '@/lib/mcp';
 import { getRelatedVideos } from '@/lib/youtube-api';
 
 // Define interface for the API response from YouTube API
@@ -18,35 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Video ID is required' }, { status: 400 });
     }
 
-    try {
-      // First try MCP function
-      console.log('Trying MCP for related videos...');
-      const result = await mcp_youtube_getRelatedVideos({ 
-        videoId, 
-        maxResults: Number(maxResults) 
-      });
-      
-      // Format the response to match our expected structure
-      const formattedData = {
-        items: result.map((video: RelatedVideo) => ({
-          id: { videoId: video.id },
-          snippet: {
-            title: video.title,
-            channelTitle: video.channelTitle,
-            thumbnails: {
-              medium: { url: video.thumbnailUrl }
-            }
-          }
-        }))
-      };
-      
-      return NextResponse.json(formattedData);
-    } catch (mcpError: unknown) {
-      console.error('Error using MCP for related videos:', mcpError);
-      // Continue to YouTube API fallback
-    }
-    
-    // Use YouTube API
+    // Use YouTube API directly
     console.log('Using YouTube API for related videos');
     const relatedVideos = await getRelatedVideos({
       videoId,
@@ -69,11 +40,18 @@ export async function POST(req: NextRequest) {
       };
       
       return NextResponse.json(formattedData);
+    } else {
+      // Return empty items with a message
+      return NextResponse.json({ 
+        items: [],
+        message: 'No related videos found. YouTube API may be experiencing issues or quota limits.'
+      });
     }
-    
-    return NextResponse.json({ error: 'Failed to fetch related videos from YouTube API' }, { status: 500 });
   } catch (error) {
     console.error('Error in related videos API:', error);
-    return NextResponse.json({ error: 'Failed to process related videos request' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to process related videos request',
+      items: []
+    }, { status: 500 });
   }
 } 
