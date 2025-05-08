@@ -153,7 +153,7 @@ export async function getRelatedVideos(params: {
     const videoTitle = videoData.items[0].snippet.title;
     const searchTerms = videoTitle
       .split(' ')
-      .filter(word => word.length > 3)
+      .filter((word: string) => word.length > 3)
       .slice(0, 3)
       .join(' ');
     
@@ -261,7 +261,7 @@ export async function getVideoTranscripts(params: {
             console.log('First few entries:', transcripts[videoId].slice(0, 3));
             continue; // Skip to next video if this method succeeded
           }
-        } catch (e) {
+        } catch {
           console.log(`Caption-scraper method failed for ${videoId}, trying fallback method`);
         }
         
@@ -325,7 +325,7 @@ export async function getVideoTranscripts(params: {
               }
             }
           }
-        } catch (fallbackError) {
+        } catch {
           console.error(`All transcript methods failed for ${videoId}`);
         }
       }

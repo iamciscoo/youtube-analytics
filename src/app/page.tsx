@@ -92,7 +92,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-      } catch (directError) {
+      } catch {
         // Swallow error and continue - this is expected outside of Cursor
         console.log('Direct MCP access not available, continuing with window check');
       }

@@ -8,6 +8,12 @@ interface TranscriptEntry {
   duration: number;
 }
 
+interface TranscriptApiEntry {
+  text: string;
+  start: number | string;
+  duration: number | string;
+}
+
 interface VideoTranscriptProps {
   videoId: string;
 }
@@ -76,7 +82,7 @@ export default function VideoTranscript({ videoId }: VideoTranscriptProps) {
         
         if (data.transcripts && data.transcripts[videoId]) {
           // Process and scale the timestamps
-          const processedTranscript = data.transcripts[videoId].map((entry: any) => {
+          const processedTranscript = data.transcripts[videoId].map((entry: TranscriptApiEntry) => {
             // Convert strings to numbers if needed
             const rawStart = typeof entry.start === 'string' ? parseFloat(entry.start) : entry.start;
             const duration = typeof entry.duration === 'string' ? parseFloat(entry.duration) : entry.duration;
@@ -92,9 +98,9 @@ export default function VideoTranscript({ videoId }: VideoTranscriptProps) {
           });
           
           // Debug first few entries to check scaling
-          const firstFew = processedTranscript.slice(0, 5).map(e => ({ 
+          const firstFew = processedTranscript.slice(0, 5).map((e: TranscriptEntry) => ({ 
             text: e.text.substring(0, 20),
-            originalStart: data.transcripts[videoId].find((o: any) => o.text === e.text)?.start,
+            originalStart: data.transcripts[videoId].find((o: TranscriptApiEntry) => o.text === e.text)?.start,
             start: e.start, 
             formatted: formatTime(e.start) 
           }));
